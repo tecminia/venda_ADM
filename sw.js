@@ -1,7 +1,7 @@
 // Configurações do Service Worker
 const APP_VERSION = '1.0.1';
 const CACHE_NAME = `venda-mais-admin-${APP_VERSION}`;
-const GITHUB_REPO = '/nlrd77/';
+const GITHUB_REPO = '/venda_ADM/';
 
 // URLs para cache (relativas ao repositório GitHub)
 const STATIC_ASSETS = [
