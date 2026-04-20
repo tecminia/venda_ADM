@@ -1554,6 +1554,8 @@
                 
                 if (newStatus === 'active') {
                     updateData.isActive = true;
+                    updateData.renewalStatus = 'none';
+                    updateData.renewal_scheduled = false;
                 } else if (newStatus === 'blocked') {
                     updateData.isActive = false;
                     updateData.renewalStatus = 'none';
@@ -1696,32 +1698,26 @@
                     status: 'active',
                     isActive: true,
                     expiryDate: expiryDateStr,
-                    renewalStatus: 'approved',
+                    renewalStatus: 'none',   // padrão: limpar flag de renovação
                     lastRenewalDate: now(),
                     paymentConfirmed: true,
                     lastPaymentDate: now()
                 };
                 
                 if (payment.type === 'scheduled_renewal') {
-                    // Renovação programada aprovada: marcar como aprovada mas manter renewal_scheduled
-                    // O cliente irá auto-extender quando chegar na data de vencimento
+                    // Renovação programada aprovada: sinalizar 'approved' para o painelvendas
+                    // auto-ativar na data de vencimento — NÃO alterar expiryDate/status agora
                     updateData.renewalStatus = 'approved';
-                    // Não altera expiryDate agora — o cliente estende automaticamente na data
-                    // (reverter a mudança de expiryDate feita acima)
                     delete updateData.expiryDate;
                     delete updateData.status;
                     delete updateData.isActive;
                 } else if (payment.type !== 'renewal') {
-                    // Novo cadastro: aplica plano e zera status de renovação
+                    // Novo cadastro: aplicar plano
                     updateData.plan = payment.plan || 'professional';
                     updateData.planDays = payment.planDays || 30;
-                    updateData.renewalStatus = 'none';
                 } else {
-                    // Renovação comum (incluindo 'monthly' e troca de plano):
-                    // atualiza plano se informado e reseta status para 'none'
+                    // Renovação comum: atualizar plano se informado, limpar flags
                     if (payment.plan) updateData.plan = payment.plan;
-                    updateData.renewalStatus = 'none';
-                    // Garantir limpeza de flags de renovação pendente
                     updateData.renewal_scheduled = false;
                 }
                 
@@ -1752,9 +1748,10 @@
                     rejectionReason: rejectionReason
                 });
                 
-                if (payment.type === 'renewal') {
+                if (payment.type === 'renewal' || payment.type === 'scheduled_renewal') {
                     await db.collection('lojas').doc(payment.userId).update({
-                        renewalStatus: 'rejected',
+                        renewalStatus: 'none',          // limpar para não travar o motor de estados
+                        renewal_scheduled: false,
                         lastRenewalResponse: now()
                     });
                 }
