@@ -882,25 +882,34 @@
         }
 
         function updateStats() {
+            // Motor de estados centralizado para estatísticas
+            function resolveStatus(user) {
+                let s = user.status || 'pending';
+                const rs = user.renewalStatus || 'none';
+                if (s === 'blocked') return 'blocked';
+                if (user.freeTrial === true) {
+                    const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
+                    return (trialEnd && trialEnd > new Date()) ? 'free_trial' : 'expired';
+                }
+                if (user.renewal_scheduled === true) return 'renewal_scheduled';
+                if (rs === 'pending' || rs === 'pending_approval') return 'renewal_pending';
+                if (s === 'active' || s === 'expired') {
+                    if (user.expiryDate) {
+                        const exp = new Date(user.expiryDate);
+                        const today = new Date(); today.setHours(0,0,0,0);
+                        return exp < today ? 'expired' : 'active';
+                    }
+                }
+                return s;
+            }
             const totalUsers = users.length;
-            const activeUsers = users.filter(user => user.status === 'active' && !user.freeTrial && !user.renewal_scheduled).length;
-            const freeTrialUsers = users.filter(user => {
-                if (!user.freeTrial) return false;
-                const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
-                return trialEnd && trialEnd > new Date();
-            }).length;
-            const pendingUsers = users.filter(user => user.status === 'pending').length;
-            const blockedUsers = users.filter(user => user.status === 'blocked').length;
-            const expiredUsers = users.filter(user => {
-                if (user.status === 'blocked') return false;
-                if (user.freeTrial) return false;
-                const exp = user.expiryDate ? new Date(user.expiryDate) : null;
-                if (!exp) return false;
-                const today = new Date(); today.setHours(0,0,0,0);
-                return exp < today;
-            }).length;
-            const renewalScheduledUsers = users.filter(user => user.renewal_scheduled === true).length;
-            const renewalPendingUsers = users.filter(user => user.renewalStatus === 'pending' && !user.renewal_scheduled).length;
+            const activeUsers = users.filter(u => resolveStatus(u) === 'active').length;
+            const freeTrialUsers = users.filter(u => resolveStatus(u) === 'free_trial').length;
+            const pendingUsers = users.filter(u => resolveStatus(u) === 'pending').length;
+            const blockedUsers = users.filter(u => resolveStatus(u) === 'blocked').length;
+            const expiredUsers = users.filter(u => resolveStatus(u) === 'expired').length;
+            const renewalScheduledUsers = users.filter(u => resolveStatus(u) === 'renewal_scheduled').length;
+            const renewalPendingUsers = users.filter(u => resolveStatus(u) === 'renewal_pending').length;
             
             const stats = [
                 { icon: 'users', label: 'Total', value: totalUsers, color: 'total' },
@@ -954,15 +963,29 @@
                     const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
                     if (trialEnd && trialEnd > new Date()) {
                         status = 'free_trial';
+                    } else {
+                        // Trial expirado → tratar como expirado
+                        status = 'expired';
                     }
                 } else if (user.renewal_scheduled === true) {
                     status = 'renewal_scheduled';
                 } else if (renewalStatus === 'pending' || renewalStatus === 'pending_approval') {
                     status = 'renewal_pending';
-                } else if (status === 'active' && user.expiryDate) {
-                    const exp = new Date(user.expiryDate);
-                    const today = new Date(); today.setHours(0,0,0,0);
-                    if (exp < today) status = 'expired';
+                } else if (renewalStatus === 'completed' || renewalStatus === 'rejected' || renewalStatus === 'approved' || renewalStatus === 'none') {
+                    // renewalStatus resolvido — avaliar status real de expiração
+                    if ((status === 'active' || status === 'expired') && user.expiryDate) {
+                        const exp = new Date(user.expiryDate);
+                        const today = new Date(); today.setHours(0,0,0,0);
+                        status = exp < today ? 'expired' : 'active';
+                    }
+                } else if (status === 'active' || status === 'expired') {
+                    // Verificar se expirou (independente do status salvo)
+                    if (user.expiryDate) {
+                        const exp = new Date(user.expiryDate);
+                        const today = new Date(); today.setHours(0,0,0,0);
+                        if (exp < today) status = 'expired';
+                        else status = 'active';
+                    }
                 }
                 
                 const statusText = getStatusText(status, renewalStatus);
@@ -1369,14 +1392,18 @@
             } else if (user.freeTrial === true) {
                 const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
                 if (trialEnd && trialEnd > new Date()) status = 'free_trial';
+                else status = 'expired';
             } else if (user.renewal_scheduled === true) {
                 status = 'renewal_scheduled';
             } else if (renewalStatus === 'pending' || renewalStatus === 'pending_approval') {
                 status = 'renewal_pending';
-            } else if (status === 'active' && user.expiryDate) {
-                const exp = new Date(user.expiryDate);
-                const today = new Date(); today.setHours(0,0,0,0);
-                if (exp < today) status = 'expired';
+            } else {
+                // renewalStatus resolvido (none/approved/rejected/completed) — avaliar expiração
+                if ((status === 'active' || status === 'expired') && user.expiryDate) {
+                    const exp = new Date(user.expiryDate);
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    status = exp < today ? 'expired' : 'active';
+                }
             }
             
             const statusText = getStatusText(status, renewalStatus);
