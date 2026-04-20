@@ -207,21 +207,6 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .mt-1 { margin-top: 8px; } .mt-2 { margin-top: 16px; } .mb-1 { margin-bottom: 8px; } .mb-2 { margin-bottom: 16px; } .text-center { text-align: center; } .flex { display: flex; } .items-center { align-items: center; } .justify-between { justify-content: space-between; } .gap-2 { gap: 8px; }
-
-        /* Dashboard melhorado */
-        .dash-alert-card { border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; align-items:center; gap:10px; font-size:0.85rem; font-weight:500; }
-        .dash-alert-card.warning { background:rgba(255,152,0,0.08); border-left:3px solid var(--warning-color); color:#e65100; }
-        .dash-alert-card.info { background:rgba(33,150,243,0.08); border-left:3px solid var(--info-color); color:#01579b; }
-        .dash-alert-card.danger { background:rgba(244,67,54,0.08); border-left:3px solid var(--danger-color); color:#b71c1c; }
-
-        .dash-user-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 0.15s; }
-        .dash-user-row:last-child { border-bottom:none; }
-        .dash-user-row:hover { background:var(--light-bg); border-radius:8px; padding-left:6px; padding-right:6px; }
-        .dash-user-name { font-weight:600; font-size:0.88rem; color:var(--text-primary); }
-        .dash-user-meta { font-size:0.75rem; color:var(--text-secondary); margin-top:2px; }
-        .dash-expiry-warn { font-size:0.72rem; font-weight:600; color:var(--warning-color); margin-top:2px; }
-        .dash-expiry-danger { font-size:0.72rem; font-weight:600; color:var(--danger-color); margin-top:2px; }
-        .dash-empty { text-align:center; padding:24px 0; color:var(--text-secondary); font-size:0.85rem; }
         @media (max-width: 360px) { 
             .stats-grid { grid-template-columns: 1fr; } 
             .action-buttons { flex-wrap: wrap; } 
@@ -277,38 +262,25 @@
             <!-- Dashboard Tab -->
             <div id="dashboardTab" class="tab-content active">
                 <div class="stats-grid" id="statsGrid"></div>
-
-                <!-- Alertas: renovações aguardando aprovação -->
-                <div id="dashRenewalPending" style="display:none; margin-bottom:12px;"></div>
-
-                <!-- Expirando em breve (próximos 7 dias) -->
-                <div id="dashExpiringSoon" style="display:none; margin-bottom:12px;"></div>
-
-                <!-- Lista resumida de todos os usuários por status -->
-                <div class="settings-section" style="padding:12px 16px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                        <h2 class="section-title" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">Contas</h2>
-                        <div style="display:flex; gap:6px;">
-                            <select id="dashStatusFilter" style="border:1px solid var(--border-color); border-radius:8px; padding:6px 10px; font-size:0.8rem; background:white; color:var(--text-primary); cursor:pointer;">
-                                <option value="all">Todos</option>
-                                <option value="active">Ativos</option>
-                                <option value="free_trial">Teste Grátis</option>
-                                <option value="renewal_pending">Renov. Pendente</option>
-                                <option value="renewal_scheduled">Renov. Programada</option>
-                                <option value="expired">Expirados</option>
-                                <option value="blocked">Bloqueados</option>
-                                <option value="pending">Pendentes</option>
-                            </select>
+                <div class="settings-section">
+                    <h2 class="section-title">Resumo do Sistema</h2>
+                    <div class="form-group">
+                        <label class="form-label">Admin Logado</label>
+                        <div class="form-input" style="background: #f8f9fa;">
+                            <div id="adminInfo"></div>
                         </div>
                     </div>
-                    <div id="dashUsersList"></div>
-                </div>
-
-                <!-- Rodapé info -->
-                <div class="settings-section" style="padding:10px 16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--text-secondary);">
-                        <span><i class="fas fa-user-shield"></i> <span id="adminInfo"></span></span>
-                        <span><i class="fas fa-clock"></i> Atualizado: <span id="lastUpdate">—</span></span>
+                    <div class="form-group">
+                        <label class="form-label">Última Atualização</label>
+                        <div class="form-input" style="background: #f8f9fa;">
+                            <div id="lastUpdate">Carregando...</div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status do Sistema</label>
+                        <div class="form-input" style="background: #f8f9fa; color: var(--success-color); font-weight: 600;">
+                            <i class="fas fa-check-circle"></i> Online e Funcionando
+                        </div>
                     </div>
                 </div>
             </div>
@@ -783,7 +755,19 @@
 
         function updateAdminInfo() {
             if (!adminUser) return;
-            adminInfo.textContent = adminUser.name || adminUser.email || 'Administrador';
+            
+            adminInfo.innerHTML = `
+                <div class="flex items-center gap-2">
+                    ${adminUser.photoURL ? 
+                        `<img src="${adminUser.photoURL}" alt="${adminUser.name}" style="width: 24px; height: 24px; border-radius: 50%;">` : 
+                        `<i class="fas fa-user" style="color: #757575;"></i>`
+                    }
+                    <div>
+                        <div style="font-weight: 600;">${adminUser.name || 'Administrador'}</div>
+                        <div style="font-size: 0.8rem; color: #757575;">${adminUser.email}</div>
+                    </div>
+                </div>
+            `;
         }
 
         function updateLastUpdateTime() {
@@ -899,13 +883,24 @@
 
         function updateStats() {
             const totalUsers = users.length;
-            const activeUsers = users.filter(u => resolveUserStatus(u) === 'active').length;
-            const freeTrialUsers = users.filter(u => resolveUserStatus(u) === 'free_trial').length;
-            const pendingUsers = users.filter(u => resolveUserStatus(u) === 'pending').length;
-            const blockedUsers = users.filter(u => resolveUserStatus(u) === 'blocked').length;
-            const expiredUsers = users.filter(u => resolveUserStatus(u) === 'expired').length;
-            const renewalScheduledUsers = users.filter(u => resolveUserStatus(u) === 'renewal_scheduled').length;
-            const renewalPendingUsers = users.filter(u => resolveUserStatus(u) === 'renewal_pending').length;
+            const activeUsers = users.filter(user => user.status === 'active' && !user.freeTrial && !user.renewal_scheduled).length;
+            const freeTrialUsers = users.filter(user => {
+                if (!user.freeTrial) return false;
+                const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
+                return trialEnd && trialEnd > new Date();
+            }).length;
+            const pendingUsers = users.filter(user => user.status === 'pending').length;
+            const blockedUsers = users.filter(user => user.status === 'blocked').length;
+            const expiredUsers = users.filter(user => {
+                if (user.status === 'blocked') return false;
+                if (user.freeTrial) return false;
+                const exp = user.expiryDate ? new Date(user.expiryDate) : null;
+                if (!exp) return false;
+                const today = new Date(); today.setHours(0,0,0,0);
+                return exp < today;
+            }).length;
+            const renewalScheduledUsers = users.filter(user => user.renewal_scheduled === true).length;
+            const renewalPendingUsers = users.filter(user => user.renewalStatus === 'pending' && !user.renewal_scheduled).length;
             
             const stats = [
                 { icon: 'users', label: 'Total', value: totalUsers, color: 'total' },
@@ -929,135 +924,6 @@
                 fragment.appendChild(statCard);
             });
             statsGrid.appendChild(fragment);
-            updateDashboard();
-        }
-
-        function updateDashboard() {
-            // Alertas: renovações aguardando aprovação
-            const dashRenewalPending = document.getElementById('dashRenewalPending');
-            const dashExpiringSoon   = document.getElementById('dashExpiringSoon');
-            const dashUsersList      = document.getElementById('dashUsersList');
-            const dashFilter         = document.getElementById('dashStatusFilter');
-            if (!dashUsersList) return;
-
-            const filter = dashFilter ? dashFilter.value : 'all';
-
-            // --- Alertas no topo ---
-            const renewalAlerts = users.filter(u => resolveUserStatus(u) === 'renewal_pending');
-            if (renewalAlerts.length > 0) {
-                dashRenewalPending.style.display = 'block';
-                dashRenewalPending.innerHTML = renewalAlerts.map(u => `
-                    <div class="dash-alert-card info" onclick="viewUserDetails('${u.id}')" style="cursor:pointer;">
-                        <i class="fas fa-sync-alt"></i>
-                        <div>
-                            <div style="font-weight:600;">${escapeHtml(u.storeName || 'Sem nome')}</div>
-                            <div style="font-size:0.75rem; opacity:0.8;">Aguardando aprovação de renovação</div>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                dashRenewalPending.style.display = 'none';
-            }
-
-            const today = new Date(); today.setHours(0,0,0,0);
-            const in7  = new Date(today); in7.setDate(in7.getDate() + 7);
-            const expiringSoon = users.filter(u => {
-                const s = resolveUserStatus(u);
-                if (s !== 'active' && s !== 'renewal_scheduled') return false;
-                if (!u.expiryDate) return false;
-                const exp = new Date(u.expiryDate);
-                return exp >= today && exp <= in7;
-            });
-
-            if (expiringSoon.length > 0) {
-                dashExpiringSoon.style.display = 'block';
-                dashExpiringSoon.innerHTML = `<div class="settings-section" style="padding:10px 14px; margin-bottom:0;">
-                    <div style="font-size:0.8rem; font-weight:600; color:var(--warning-color); margin-bottom:8px;"><i class="fas fa-exclamation-triangle"></i> Expirando em até 7 dias</div>
-                    ${expiringSoon.map(u => {
-                        const exp = new Date(u.expiryDate);
-                        const diff = Math.ceil((exp - today) / 86400000);
-                        return `<div class="dash-user-row" onclick="viewUserDetails('${u.id}')">
-                            <div>
-                                <div class="dash-user-name">${escapeHtml(u.storeName || 'Sem nome')}</div>
-                                <div class="dash-expiry-warn"><i class="fas fa-clock"></i> Expira em ${diff === 0 ? 'hoje' : diff + ' dia(s)'} — ${new Date(u.expiryDate).toLocaleDateString('pt-BR')}</div>
-                            </div>
-                            <span class="status-badge status-pending">${diff === 0 ? 'Hoje' : diff + 'd'}</span>
-                        </div>`;
-                    }).join('')}
-                </div>`;
-            } else {
-                dashExpiringSoon.style.display = 'none';
-            }
-
-            // --- Lista de usuários filtrada ---
-            const filtered = filter === 'all' ? users : users.filter(u => resolveUserStatus(u) === filter);
-
-            if (filtered.length === 0) {
-                dashUsersList.innerHTML = `<div class="dash-empty"><i class="fas fa-search" style="font-size:1.5rem; margin-bottom:8px; display:block;"></i>Nenhum usuário neste filtro</div>`;
-                return;
-            }
-
-            // Ordenar: renovação pendente primeiro, depois por expiryDate
-            const statusOrder = { renewal_pending:0, expired:1, renewal_scheduled:2, active:3, free_trial:4, pending:5, blocked:6 };
-            const sorted = [...filtered].sort((a, b) => {
-                const sa = statusOrder[resolveUserStatus(a)] ?? 9;
-                const sb = statusOrder[resolveUserStatus(b)] ?? 9;
-                if (sa !== sb) return sa - sb;
-                const da = a.expiryDate || '';
-                const db2 = b.expiryDate || '';
-                return da.localeCompare(db2);
-            });
-
-            dashUsersList.innerHTML = sorted.map(u => {
-                const s = resolveUserStatus(u);
-                const sc = getStatusClass(s);
-                const st = getStatusText(s, u.renewalStatus || 'none');
-                let meta = u.email || '';
-                let expiryLine = '';
-                if (u.expiryDate) {
-                    const exp = new Date(u.expiryDate);
-                    const diff = Math.ceil((exp - today) / 86400000);
-                    if (s === 'expired') {
-                        expiryLine = `<div class="dash-expiry-danger"><i class="fas fa-times-circle"></i> Expirou em ${exp.toLocaleDateString('pt-BR')}</div>`;
-                    } else if (diff >= 0 && diff <= 7) {
-                        expiryLine = `<div class="dash-expiry-warn"><i class="fas fa-clock"></i> Expira em ${diff === 0 ? 'hoje' : diff + ' dia(s)'}</div>`;
-                    } else if (s === 'active') {
-                        expiryLine = `<div class="dash-user-meta">Válido até ${exp.toLocaleDateString('pt-BR')}</div>`;
-                    }
-                }
-                if (s === 'free_trial' && u.freeTrialEnd) {
-                    expiryLine = `<div class="dash-user-meta" style="color:#f57c00;"><i class="fas fa-gift"></i> Trial até ${new Date(u.freeTrialEnd).toLocaleDateString('pt-BR')}</div>`;
-                }
-                return `<div class="dash-user-row" onclick="viewUserDetails('${u.id}')">
-                    <div style="flex:1; min-width:0;">
-                        <div class="dash-user-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(u.storeName || 'Sem nome')}</div>
-                        <div class="dash-user-meta" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(meta)}</div>
-                        ${expiryLine}
-                    </div>
-                    <span class="status-badge ${sc}" style="white-space:nowrap; margin-left:8px; flex-shrink:0;">${st}</span>
-                </div>`;
-            }).join('');
-        }
-
-        // Motor de estados reutilizável como função nomeada
-        function resolveUserStatus(user) {
-            let s = user.status || 'pending';
-            const rs = user.renewalStatus || 'none';
-            if (s === 'blocked') return 'blocked';
-            if (user.freeTrial === true) {
-                const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
-                return (trialEnd && trialEnd > new Date()) ? 'free_trial' : 'expired';
-            }
-            if (user.renewal_scheduled === true) return 'renewal_scheduled';
-            if (rs === 'pending' || rs === 'pending_approval') return 'renewal_pending';
-            if (rs === 'completed' || rs === 'rejected' || rs === 'approved' || rs === 'none') {
-                if ((s === 'active' || s === 'expired') && user.expiryDate) {
-                    const exp = new Date(user.expiryDate);
-                    const today = new Date(); today.setHours(0,0,0,0);
-                    return exp < today ? 'expired' : 'active';
-                }
-            }
-            return s;
         }
 
         function updateUsersList() {
@@ -1078,8 +944,26 @@
             for (const user of users) {
                 if (searchTerm && !user.storeName?.toLowerCase().includes(searchLower) && !user.email?.toLowerCase().includes(searchLower)) continue;
                 
+                let status = user.status || 'pending';
                 const renewalStatus = user.renewalStatus || 'none';
-                let status = resolveUserStatus(user);
+                
+                // Determinar status real do usuário (motor de estados)
+                if (status === 'blocked') {
+                    // bloqueado tem prioridade máxima — nunca sobrescrever
+                } else if (user.freeTrial === true) {
+                    const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
+                    if (trialEnd && trialEnd > new Date()) {
+                        status = 'free_trial';
+                    }
+                } else if (user.renewal_scheduled === true) {
+                    status = 'renewal_scheduled';
+                } else if (renewalStatus === 'pending' || renewalStatus === 'pending_approval') {
+                    status = 'renewal_pending';
+                } else if (status === 'active' && user.expiryDate) {
+                    const exp = new Date(user.expiryDate);
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    if (exp < today) status = 'expired';
+                }
                 
                 const statusText = getStatusText(status, renewalStatus);
                 const statusClass = getStatusClass(status, renewalStatus);
@@ -1311,8 +1195,6 @@
             });
             
             searchUsers.addEventListener('input', updateUsersList);
-            const dashFilter = document.getElementById('dashStatusFilter');
-            if (dashFilter) dashFilter.addEventListener('change', updateDashboard);
             searchPayments.addEventListener('input', updatePaymentsList);
             
             paymentSettingsForm.addEventListener('submit', saveSystemConfig);
@@ -1479,9 +1361,23 @@
             const user = users.find(user => user.id === userId);
             if (!user) return;
             
-            // Motor de estados centralizado
+            // Motor de estados: mesma lógica da lista
+            let status = user.status || 'pending';
             const renewalStatus = user.renewalStatus || 'none';
-            let status = resolveUserStatus(user);
+            if (status === 'blocked') {
+                // bloqueado tem prioridade máxima — nunca sobrescrever
+            } else if (user.freeTrial === true) {
+                const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
+                if (trialEnd && trialEnd > new Date()) status = 'free_trial';
+            } else if (user.renewal_scheduled === true) {
+                status = 'renewal_scheduled';
+            } else if (renewalStatus === 'pending' || renewalStatus === 'pending_approval') {
+                status = 'renewal_pending';
+            } else if (status === 'active' && user.expiryDate) {
+                const exp = new Date(user.expiryDate);
+                const today = new Date(); today.setHours(0,0,0,0);
+                if (exp < today) status = 'expired';
+            }
             
             const statusText = getStatusText(status, renewalStatus);
             const statusClass = getStatusClass(status, renewalStatus);
@@ -1554,8 +1450,6 @@
                 
                 if (newStatus === 'active') {
                     updateData.isActive = true;
-                    updateData.renewalStatus = 'none';
-                    updateData.renewal_scheduled = false;
                 } else if (newStatus === 'blocked') {
                     updateData.isActive = false;
                     updateData.renewalStatus = 'none';
@@ -1698,26 +1592,32 @@
                     status: 'active',
                     isActive: true,
                     expiryDate: expiryDateStr,
-                    renewalStatus: 'none',   // padrão: limpar flag de renovação
+                    renewalStatus: 'approved',
                     lastRenewalDate: now(),
                     paymentConfirmed: true,
                     lastPaymentDate: now()
                 };
                 
                 if (payment.type === 'scheduled_renewal') {
-                    // Renovação programada aprovada: sinalizar 'approved' para o painelvendas
-                    // auto-ativar na data de vencimento — NÃO alterar expiryDate/status agora
+                    // Renovação programada aprovada: marcar como aprovada mas manter renewal_scheduled
+                    // O cliente irá auto-extender quando chegar na data de vencimento
                     updateData.renewalStatus = 'approved';
+                    // Não altera expiryDate agora — o cliente estende automaticamente na data
+                    // (reverter a mudança de expiryDate feita acima)
                     delete updateData.expiryDate;
                     delete updateData.status;
                     delete updateData.isActive;
                 } else if (payment.type !== 'renewal') {
-                    // Novo cadastro: aplicar plano
+                    // Novo cadastro: aplica plano e zera status de renovação
                     updateData.plan = payment.plan || 'professional';
                     updateData.planDays = payment.planDays || 30;
+                    updateData.renewalStatus = 'none';
                 } else {
-                    // Renovação comum: atualizar plano se informado, limpar flags
+                    // Renovação comum (incluindo 'monthly' e troca de plano):
+                    // atualiza plano se informado e reseta status para 'none'
                     if (payment.plan) updateData.plan = payment.plan;
+                    updateData.renewalStatus = 'none';
+                    // Garantir limpeza de flags de renovação pendente
                     updateData.renewal_scheduled = false;
                 }
                 
@@ -1748,10 +1648,9 @@
                     rejectionReason: rejectionReason
                 });
                 
-                if (payment.type === 'renewal' || payment.type === 'scheduled_renewal') {
+                if (payment.type === 'renewal') {
                     await db.collection('lojas').doc(payment.userId).update({
-                        renewalStatus: 'none',          // limpar para não travar o motor de estados
-                        renewal_scheduled: false,
+                        renewalStatus: 'rejected',
                         lastRenewalResponse: now()
                     });
                 }
