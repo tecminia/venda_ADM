@@ -881,26 +881,41 @@
             }
         }
 
+        function resolveUserStatus(user) {
+            let status = user.status || 'pending';
+            const renewalStatus = user.renewalStatus || 'none';
+            if (status === 'blocked') {
+                // bloqueado tem prioridade máxima — nunca sobrescrever
+            } else if (user.freeTrial === true) {
+                const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
+                if (trialEnd && trialEnd > new Date()) {
+                    status = 'free_trial';
+                }
+            } else if (user.renewal_scheduled === true) {
+                status = 'renewal_scheduled';
+            } else if (renewalStatus === 'pending' || renewalStatus === 'pending_approval') {
+                status = 'renewal_pending';
+            } else if (status === 'active' && user.expiryDate) {
+                const exp = new Date(user.expiryDate);
+                const today = new Date(); today.setHours(0,0,0,0);
+                if (exp < today) status = 'expired';
+            }
+            return status;
+        }
+
         function updateStats() {
             const totalUsers = users.length;
-            const activeUsers = users.filter(user => user.status === 'active' && !user.freeTrial && !user.renewal_scheduled).length;
-            const freeTrialUsers = users.filter(user => {
-                if (!user.freeTrial) return false;
-                const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
-                return trialEnd && trialEnd > new Date();
-            }).length;
-            const pendingUsers = users.filter(user => user.status === 'pending').length;
-            const blockedUsers = users.filter(user => user.status === 'blocked').length;
-            const expiredUsers = users.filter(user => {
-                if (user.status === 'blocked') return false;
-                if (user.freeTrial) return false;
-                const exp = user.expiryDate ? new Date(user.expiryDate) : null;
-                if (!exp) return false;
-                const today = new Date(); today.setHours(0,0,0,0);
-                return exp < today;
-            }).length;
-            const renewalScheduledUsers = users.filter(user => user.renewal_scheduled === true).length;
-            const renewalPendingUsers = users.filter(user => user.renewalStatus === 'pending' && !user.renewal_scheduled).length;
+
+            // Usa o mesmo motor de estados de updateUsersList
+            const resolvedStatuses = users.map(u => resolveUserStatus(u));
+
+            const activeUsers           = resolvedStatuses.filter(s => s === 'active').length;
+            const freeTrialUsers        = resolvedStatuses.filter(s => s === 'free_trial').length;
+            const pendingUsers          = resolvedStatuses.filter(s => s === 'pending').length;
+            const blockedUsers          = resolvedStatuses.filter(s => s === 'blocked').length;
+            const expiredUsers          = resolvedStatuses.filter(s => s === 'expired').length;
+            const renewalScheduledUsers = resolvedStatuses.filter(s => s === 'renewal_scheduled').length;
+            const renewalPendingUsers   = resolvedStatuses.filter(s => s === 'renewal_pending').length;
             
             const stats = [
                 { icon: 'users', label: 'Total', value: totalUsers, color: 'total' },
@@ -944,26 +959,10 @@
             for (const user of users) {
                 if (searchTerm && !user.storeName?.toLowerCase().includes(searchLower) && !user.email?.toLowerCase().includes(searchLower)) continue;
                 
-                let status = user.status || 'pending';
                 const renewalStatus = user.renewalStatus || 'none';
                 
-                // Determinar status real do usuário (motor de estados)
-                if (status === 'blocked') {
-                    // bloqueado tem prioridade máxima — nunca sobrescrever
-                } else if (user.freeTrial === true) {
-                    const trialEnd = user.freeTrialEnd ? new Date(user.freeTrialEnd) : null;
-                    if (trialEnd && trialEnd > new Date()) {
-                        status = 'free_trial';
-                    }
-                } else if (user.renewal_scheduled === true) {
-                    status = 'renewal_scheduled';
-                } else if (renewalStatus === 'pending' || renewalStatus === 'pending_approval') {
-                    status = 'renewal_pending';
-                } else if (status === 'active' && user.expiryDate) {
-                    const exp = new Date(user.expiryDate);
-                    const today = new Date(); today.setHours(0,0,0,0);
-                    if (exp < today) status = 'expired';
-                }
+                // Determinar status real do usuário usando motor de estados centralizado
+                let status = resolveUserStatus(user);
                 
                 const statusText = getStatusText(status, renewalStatus);
                 const statusClass = getStatusClass(status, renewalStatus);
